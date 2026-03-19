@@ -4,32 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dionne's Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; min-height: 100vh; padding: 1rem; color: #1a1a1a; }
-  
   h1 { font-size: 20px; font-weight: 500; margin-bottom: 1.5rem; color: #1a1a1a; }
-  h2 { font-size: 15px; font-weight: 500; margin-bottom: 1rem; }
-
   .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 900px; margin: 0 auto; }
   @media (max-width: 600px) { .layout { grid-template-columns: 1fr; } }
-
   .section { background: white; border-radius: 12px; border: 0.5px solid rgba(0,0,0,0.1); padding: 1.25rem; }
-
   .section-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.75rem; }
   .recurring-label { color: #0F6E56; }
   .resistance-label { color: #993C1D; }
-
   .add-row { display: flex; gap: 8px; margin-bottom: 1rem; }
   .add-row input { flex: 1; padding: 8px 10px; border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px; font-size: 14px; background: #fafaf8; outline: none; }
   .add-row input:focus { border-color: rgba(0,0,0,0.3); }
   .add-row button { padding: 8px 14px; border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px; background: white; font-size: 14px; cursor: pointer; white-space: nowrap; }
   .add-row button:hover { background: #f5f4f0; }
-
   .goal-row { display: flex; gap: 8px; margin-bottom: 1rem; align-items: center; }
   .goal-row label { font-size: 12px; color: #666; white-space: nowrap; }
   .goal-row input { width: 70px; padding: 6px 8px; border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px; font-size: 13px; background: #fafaf8; outline: none; }
-
   .habit-item { border: 0.5px solid rgba(0,0,0,0.08); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
   .habit-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
   .habit-name { font-size: 14px; font-weight: 500; }
@@ -43,28 +36,23 @@
   .log-btn:active { transform: scale(0.97); }
   .del-btn { padding: 7px 10px; border: 0.5px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; color: #999; font-size: 13px; cursor: pointer; }
   .del-btn:hover { color: #E24B4A; border-color: #E24B4A; }
-
   .resistance-item { border: 0.5px solid rgba(0,0,0,0.08); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 10px; }
-  .resistance-item.done { opacity: 0.5; }
-  .check-btn { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; border: 1.5px solid #D85A30; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .check-btn { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; border: 1.5px solid #D85A30; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 1px; font-size: 12px; font-weight: 700; color: white; }
   .check-btn:hover { background: #FAECE7; }
-  .check-btn.checked { background: #D85A30; border-color: #D85A30; }
-  .check-icon { display: none; color: white; font-size: 12px; font-weight: 700; }
-  .check-btn.checked .check-icon { display: block; }
   .resistance-body { flex: 1; }
   .resistance-name { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
   .resistance-age { font-size: 11px; color: #D85A30; }
   .r-del-btn { padding: 4px 8px; border: none; background: none; color: #ccc; font-size: 16px; cursor: pointer; line-height: 1; }
   .r-del-btn:hover { color: #E24B4A; }
-
   .done-section { margin-top: 1.25rem; border-top: 0.5px solid rgba(0,0,0,0.08); padding-top: 1rem; }
   .done-header { font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #aaa; margin-bottom: 0.5rem; }
-  .done-item { font-size: 13px; color: #999; padding: 4px 0; display: flex; justify-content: space-between; align-items: center; }
+  .done-item { font-size: 13px; color: #999; padding: 4px 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .done-item span { text-decoration: line-through; }
-  .done-item em { font-style: normal; font-size: 11px; color: #bbb; }
-
+  .done-item em { font-style: normal; font-size: 11px; color: #bbb; white-space: nowrap; }
   .empty { font-size: 13px; color: #bbb; padding: 1rem 0; text-align: center; }
-
+  .loading { font-size: 13px; color: #bbb; padding: 1rem 0; text-align: center; }
+  .status { font-size: 11px; color: #bbb; text-align: center; padding: 0.5rem 0; max-width: 900px; margin: 0 auto; }
+  .status.error { color: #D85A30; }
   .confetti-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; overflow: hidden; }
   .confetti-piece { position: absolute; width: 8px; height: 8px; border-radius: 2px; animation: fall 1.2s ease-in forwards; }
   @keyframes fall {
@@ -74,15 +62,11 @@
 </style>
 </head>
 <body>
-
 <div style="max-width: 900px; margin: 0 auto;">
   <h1>Your tracker</h1>
-
   <div class="layout">
-    <!-- RECURRING -->
     <div class="section">
       <div class="section-label recurring-label">Recurring habits</div>
-
       <div class="add-row">
         <input type="text" id="hab-name" placeholder="Add a habit..." />
       </div>
@@ -91,47 +75,38 @@
         <input type="number" id="hab-goal" value="30" min="1" />
         <button onclick="addHabit()">Add</button>
       </div>
-
-      <div id="habits-list"></div>
+      <div id="habits-list"><div class="loading">Loading...</div></div>
     </div>
-
-    <!-- RESISTANCE -->
     <div class="section">
       <div class="section-label resistance-label">Resistance list</div>
       <div style="font-size: 12px; color: #999; margin-bottom: 0.75rem;">Life-changing things you keep avoiding</div>
-
       <div class="add-row">
         <input type="text" id="res-name" placeholder="What are you avoiding?" />
         <button onclick="addResistance()">Add</button>
       </div>
-
-      <div id="resistance-list"></div>
-
+      <div id="resistance-list"><div class="loading">Loading...</div></div>
       <div class="done-section" id="done-section" style="display:none;">
         <div class="done-header">Conquered</div>
         <div id="done-list"></div>
       </div>
     </div>
   </div>
+  <div class="status" id="status"></div>
 </div>
-
 <div class="confetti-wrap" id="confetti-wrap"></div>
-
 <script>
-const HABITS_KEY = 'dn_habits_v2';
-const RESISTANCE_KEY = 'dn_resistance_v2';
-const DONE_KEY = 'dn_done_v2';
+const SUPABASE_URL = 'https://jrinudnvlxnhzjvtgdfd.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_t6G8NAqGoGFW1Pe97AA-xw_mL0zd4r-';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function load(key) {
-  try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e) { return []; }
-}
-function save(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
-}
+let habits = [], resistance = [], done = [];
 
-let habits = load(HABITS_KEY);
-let resistance = load(RESISTANCE_KEY);
-let done = load(DONE_KEY);
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (isError ? ' error' : '');
+  if (!isError && msg) setTimeout(() => el.textContent = '', 2000);
+}
 
 function daysSince(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -141,80 +116,91 @@ function daysSince(dateStr) {
   return days + ' days sitting';
 }
 
-function addHabit() {
+async function loadAll() {
+  const { data, error } = await db.from('tasks').select('*').order('added', { ascending: true });
+  if (error) { setStatus('Could not load: ' + error.message, true); return; }
+  habits = data.filter(x => x.type === 'habit');
+  resistance = data.filter(x => x.type === 'resistance' && !x.completed);
+  done = data.filter(x => x.type === 'resistance' && x.completed).sort((a,b) => new Date(b.completed) - new Date(a.completed));
+  renderHabits();
+  renderResistance();
+}
+
+async function addHabit() {
   const name = document.getElementById('hab-name').value.trim();
   const goal = parseInt(document.getElementById('hab-goal').value) || 30;
   if (!name) return;
-  habits.push({ id: Date.now(), name, goal, count: 0 });
-  save(HABITS_KEY, habits);
+  const { data, error } = await db.from('tasks').insert({ type: 'habit', name, goal, count: 0 }).select().single();
+  if (error) { setStatus('Could not add habit', true); return; }
   document.getElementById('hab-name').value = '';
+  habits.push(data);
   renderHabits();
 }
 
-function logHabit(id) {
+async function logHabit(id) {
   const h = habits.find(x => x.id === id);
   if (!h) return;
-  h.count++;
-  save(HABITS_KEY, habits);
+  const newCount = (h.count || 0) + 1;
+  const { error } = await db.from('tasks').update({ count: newCount }).eq('id', id);
+  if (error) { setStatus('Could not log', true); return; }
+  h.count = newCount;
   fireConfetti();
   renderHabits();
 }
 
-function deleteHabit(id) {
+async function deleteHabit(id) {
+  await db.from('tasks').delete().eq('id', id);
   habits = habits.filter(x => x.id !== id);
-  save(HABITS_KEY, habits);
   renderHabits();
+}
+
+async function addResistance() {
+  const name = document.getElementById('res-name').value.trim();
+  if (!name) return;
+  const { data, error } = await db.from('tasks').insert({ type: 'resistance', name }).select().single();
+  if (error) { setStatus('Could not add', true); return; }
+  document.getElementById('res-name').value = '';
+  resistance.push(data);
+  renderResistance();
+}
+
+async function completeResistance(id) {
+  const now = new Date().toISOString();
+  const { error } = await db.from('tasks').update({ completed: now }).eq('id', id);
+  if (error) { setStatus('Could not complete', true); return; }
+  const item = resistance.find(x => x.id === id);
+  resistance = resistance.filter(x => x.id !== id);
+  if (item) { item.completed = now; done.unshift(item); }
+  fireConfetti();
+  renderResistance();
+}
+
+async function deleteResistance(id) {
+  await db.from('tasks').delete().eq('id', id);
+  resistance = resistance.filter(x => x.id !== id);
+  renderResistance();
 }
 
 function renderHabits() {
   const el = document.getElementById('habits-list');
-  if (!habits.length) {
-    el.innerHTML = '<div class="empty">No habits yet</div>';
-    return;
-  }
+  if (!habits.length) { el.innerHTML = '<div class="empty">No habits yet</div>'; return; }
   el.innerHTML = habits.map(h => {
-    const pct = Math.min(100, Math.round((h.count / h.goal) * 100));
+    const pct = Math.min(100, Math.round(((h.count || 0) / h.goal) * 100));
     return `<div class="habit-item">
       <div class="habit-top">
         <div class="habit-name">${h.name}</div>
         <div style="text-align:right">
-          <div class="habit-count">${h.count}</div>
+          <div class="habit-count">${h.count || 0}</div>
           <div class="habit-goal">of ${h.goal}</div>
         </div>
       </div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
       <div class="habit-actions">
-        <button class="log-btn" onclick="logHabit(${h.id})">+ Log one</button>
-        <button class="del-btn" onclick="deleteHabit(${h.id})">×</button>
+        <button class="log-btn" onclick="logHabit('${h.id}')">+ Log one</button>
+        <button class="del-btn" onclick="deleteHabit('${h.id}')">×</button>
       </div>
     </div>`;
   }).join('');
-}
-
-function addResistance() {
-  const name = document.getElementById('res-name').value.trim();
-  if (!name) return;
-  resistance.push({ id: Date.now(), name, added: new Date().toISOString() });
-  save(RESISTANCE_KEY, resistance);
-  document.getElementById('res-name').value = '';
-  renderResistance();
-}
-
-function completeResistance(id) {
-  const item = resistance.find(x => x.id === id);
-  if (!item) return;
-  resistance = resistance.filter(x => x.id !== id);
-  done.unshift({ ...item, completed: new Date().toISOString() });
-  save(RESISTANCE_KEY, resistance);
-  save(DONE_KEY, done);
-  fireConfetti();
-  renderResistance();
-}
-
-function deleteResistance(id) {
-  resistance = resistance.filter(x => x.id !== id);
-  save(RESISTANCE_KEY, resistance);
-  renderResistance();
 }
 
 function renderResistance() {
@@ -224,18 +210,14 @@ function renderResistance() {
   } else {
     el.innerHTML = resistance.map(r => `
       <div class="resistance-item">
-        <button class="check-btn" onclick="completeResistance(${r.id})">
-          <span class="check-icon">✓</span>
-        </button>
+        <button class="check-btn" onclick="completeResistance('${r.id}')"></button>
         <div class="resistance-body">
           <div class="resistance-name">${r.name}</div>
           <div class="resistance-age">${daysSince(r.added)}</div>
         </div>
-        <button class="r-del-btn" onclick="deleteResistance(${r.id})">×</button>
-      </div>
-    `).join('');
+        <button class="r-del-btn" onclick="deleteResistance('${r.id}')">×</button>
+      </div>`).join('');
   }
-
   const doneSection = document.getElementById('done-section');
   const doneList = document.getElementById('done-list');
   if (done.length) {
@@ -244,8 +226,7 @@ function renderResistance() {
       <div class="done-item">
         <span>${d.name}</span>
         <em>${daysSince(d.added)} before done</em>
-      </div>
-    `).join('');
+      </div>`).join('');
   } else {
     doneSection.style.display = 'none';
   }
@@ -262,7 +243,6 @@ function fireConfetti() {
     p.style.background = colors[Math.floor(Math.random() * colors.length)];
     p.style.animationDelay = Math.random() * 0.4 + 's';
     p.style.animationDuration = (0.9 + Math.random() * 0.6) + 's';
-    p.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
     wrap.appendChild(p);
     setTimeout(() => p.remove(), 1800);
   }
@@ -271,8 +251,7 @@ function fireConfetti() {
 document.getElementById('hab-name').addEventListener('keydown', e => { if (e.key === 'Enter') addHabit(); });
 document.getElementById('res-name').addEventListener('keydown', e => { if (e.key === 'Enter') addResistance(); });
 
-renderHabits();
-renderResistance();
+loadAll();
 </script>
 </body>
 </html>
