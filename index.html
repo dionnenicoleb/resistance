@@ -17,7 +17,11 @@
 
   #app { display: none; }
 
-  h1 { font-size: 20px; font-weight: 500; margin-bottom: 1.5rem; color: #1a1a1a; }
+  .top-bar { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto 1.5rem; }
+  h1 { font-size: 20px; font-weight: 500; color: #1a1a1a; }
+  .export-btn { padding: 7px 14px; border: 0.5px solid rgba(0,0,0,0.15); border-radius: 8px; background: white; font-size: 13px; cursor: pointer; color: #555; }
+  .export-btn:hover { background: #f0f0ec; }
+
   .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 900px; margin: 0 auto; }
   @media (max-width: 600px) { .layout { grid-template-columns: 1fr; } }
   .section { background: white; border-radius: 12px; border: 0.5px solid rgba(0,0,0,0.1); padding: 1.25rem; }
@@ -79,37 +83,38 @@
 </div>
 
 <div id="app">
-  <div style="max-width: 900px; margin: 0 auto;">
+  <div class="top-bar">
     <h1>Your tracker</h1>
-    <div class="layout">
-      <div class="section">
-        <div class="section-label recurring-label">Recurring habits</div>
-        <div class="add-row">
-          <input type="text" id="hab-name" placeholder="Add a habit..." />
-        </div>
-        <div class="goal-row">
-          <label for="hab-goal">Goal (times):</label>
-          <input type="number" id="hab-goal" value="30" min="1" />
-          <button onclick="addHabit()">Add</button>
-        </div>
-        <div id="habits-list"><div class="loading">Loading...</div></div>
+    <button class="export-btn" onclick="exportCSV()">Export data</button>
+  </div>
+  <div class="layout">
+    <div class="section">
+      <div class="section-label recurring-label">Recurring habits</div>
+      <div class="add-row">
+        <input type="text" id="hab-name" placeholder="Add a habit..." />
       </div>
-      <div class="section">
-        <div class="section-label resistance-label">Resistance list</div>
-        <div style="font-size: 12px; color: #999; margin-bottom: 0.75rem;">Life-changing things you keep avoiding</div>
-        <div class="add-row">
-          <input type="text" id="res-name" placeholder="What are you avoiding?" />
-          <button onclick="addResistance()">Add</button>
-        </div>
-        <div id="resistance-list"><div class="loading">Loading...</div></div>
-        <div class="done-section" id="done-section" style="display:none;">
-          <div class="done-header">Conquered</div>
-          <div id="done-list"></div>
-        </div>
+      <div class="goal-row">
+        <label for="hab-goal">Goal (times):</label>
+        <input type="number" id="hab-goal" value="30" min="1" />
+        <button onclick="addHabit()">Add</button>
+      </div>
+      <div id="habits-list"><div class="loading">Loading...</div></div>
+    </div>
+    <div class="section">
+      <div class="section-label resistance-label">Resistance list</div>
+      <div style="font-size: 12px; color: #999; margin-bottom: 0.75rem;">Life-changing things you keep avoiding</div>
+      <div class="add-row">
+        <input type="text" id="res-name" placeholder="What are you avoiding?" />
+        <button onclick="addResistance()">Add</button>
+      </div>
+      <div id="resistance-list"><div class="loading">Loading...</div></div>
+      <div class="done-section" id="done-section" style="display:none;">
+        <div class="done-header">Conquered</div>
+        <div id="done-list"></div>
       </div>
     </div>
-    <div class="status" id="status"></div>
   </div>
+  <div class="status" id="status"></div>
 </div>
 
 <div class="confetti-wrap" id="confetti-wrap"></div>
@@ -167,6 +172,35 @@ async function loadAll() {
   done = data.filter(x => x.type === 'resistance' && x.completed).sort((a,b) => new Date(b.completed) - new Date(a.completed));
   renderHabits();
   renderResistance();
+}
+
+async function exportCSV() {
+  const { data, error } = await db.from('tasks').select('*').order('added', { ascending: true });
+  if (error) { setStatus('Export failed', true); return; }
+
+  const rows = [['type', 'name', 'goal', 'count', 'added', 'completed', 'days_sitting']];
+  data.forEach(r => {
+    const days = r.added ? Math.floor((Date.now() - new Date(r.added).getTime()) / 86400000) : '';
+    rows.push([
+      r.type || '',
+      '"' + (r.name || '').replace(/"/g, '""') + '"',
+      r.goal || '',
+      r.count || 0,
+      r.added ? new Date(r.added).toLocaleDateString() : '',
+      r.completed ? new Date(r.completed).toLocaleDateString() : '',
+      days
+    ]);
+  });
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'dionne-tracker-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  setStatus('Exported');
 }
 
 async function addHabit() {
