@@ -8,6 +8,15 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; min-height: 100vh; padding: 1rem; color: #1a1a1a; }
+
+  #pin-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 1rem; }
+  #pin-screen h2 { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+  #pin-screen input { width: 120px; padding: 10px; text-align: center; font-size: 22px; letter-spacing: 8px; border: 0.5px solid rgba(0,0,0,0.2); border-radius: 10px; background: white; outline: none; }
+  #pin-screen input:focus { border-color: rgba(0,0,0,0.4); }
+  #pin-error { font-size: 13px; color: #D85A30; min-height: 18px; }
+
+  #app { display: none; }
+
   h1 { font-size: 20px; font-weight: 500; margin-bottom: 1.5rem; color: #1a1a1a; }
   .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 900px; margin: 0 auto; }
   @media (max-width: 600px) { .layout { grid-template-columns: 1fr; } }
@@ -62,39 +71,73 @@
 </style>
 </head>
 <body>
-<div style="max-width: 900px; margin: 0 auto;">
-  <h1>Your tracker</h1>
-  <div class="layout">
-    <div class="section">
-      <div class="section-label recurring-label">Recurring habits</div>
-      <div class="add-row">
-        <input type="text" id="hab-name" placeholder="Add a habit..." />
-      </div>
-      <div class="goal-row">
-        <label for="hab-goal">Goal (times):</label>
-        <input type="number" id="hab-goal" value="30" min="1" />
-        <button onclick="addHabit()">Add</button>
-      </div>
-      <div id="habits-list"><div class="loading">Loading...</div></div>
-    </div>
-    <div class="section">
-      <div class="section-label resistance-label">Resistance list</div>
-      <div style="font-size: 12px; color: #999; margin-bottom: 0.75rem;">Life-changing things you keep avoiding</div>
-      <div class="add-row">
-        <input type="text" id="res-name" placeholder="What are you avoiding?" />
-        <button onclick="addResistance()">Add</button>
-      </div>
-      <div id="resistance-list"><div class="loading">Loading...</div></div>
-      <div class="done-section" id="done-section" style="display:none;">
-        <div class="done-header">Conquered</div>
-        <div id="done-list"></div>
-      </div>
-    </div>
-  </div>
-  <div class="status" id="status"></div>
+
+<div id="pin-screen">
+  <h2>Enter your PIN</h2>
+  <input type="password" id="pin-input" maxlength="4" inputmode="numeric" placeholder="••••" autofocus />
+  <div id="pin-error"></div>
 </div>
+
+<div id="app">
+  <div style="max-width: 900px; margin: 0 auto;">
+    <h1>Your tracker</h1>
+    <div class="layout">
+      <div class="section">
+        <div class="section-label recurring-label">Recurring habits</div>
+        <div class="add-row">
+          <input type="text" id="hab-name" placeholder="Add a habit..." />
+        </div>
+        <div class="goal-row">
+          <label for="hab-goal">Goal (times):</label>
+          <input type="number" id="hab-goal" value="30" min="1" />
+          <button onclick="addHabit()">Add</button>
+        </div>
+        <div id="habits-list"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="section">
+        <div class="section-label resistance-label">Resistance list</div>
+        <div style="font-size: 12px; color: #999; margin-bottom: 0.75rem;">Life-changing things you keep avoiding</div>
+        <div class="add-row">
+          <input type="text" id="res-name" placeholder="What are you avoiding?" />
+          <button onclick="addResistance()">Add</button>
+        </div>
+        <div id="resistance-list"><div class="loading">Loading...</div></div>
+        <div class="done-section" id="done-section" style="display:none;">
+          <div class="done-header">Conquered</div>
+          <div id="done-list"></div>
+        </div>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
 <div class="confetti-wrap" id="confetti-wrap"></div>
+
 <script>
+const CORRECT_PIN = '0808';
+
+function checkPin(val) {
+  if (val.length < 4) return;
+  if (val === CORRECT_PIN) {
+    sessionStorage.setItem('dn_auth', '1');
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadAll();
+  } else {
+    document.getElementById('pin-error').textContent = 'Wrong PIN';
+    document.getElementById('pin-input').value = '';
+    setTimeout(() => document.getElementById('pin-error').textContent = '', 1500);
+  }
+}
+
+if (sessionStorage.getItem('dn_auth') === '1') {
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+document.getElementById('pin-input').addEventListener('input', e => checkPin(e.target.value));
+
 const SUPABASE_URL = 'https://jrinudnvlxnhzjvtgdfd.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_t6G8NAqGoGFW1Pe97AA-xw_mL0zd4r-';
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -248,10 +291,14 @@ function fireConfetti() {
   }
 }
 
-document.getElementById('hab-name').addEventListener('keydown', e => { if (e.key === 'Enter') addHabit(); });
-document.getElementById('res-name').addEventListener('keydown', e => { if (e.key === 'Enter') addResistance(); });
+document.addEventListener('keydown', e => {
+  if (document.getElementById('app').style.display === 'block') {
+    if (e.target.id === 'hab-name' && e.key === 'Enter') addHabit();
+    if (e.target.id === 'res-name' && e.key === 'Enter') addResistance();
+  }
+});
 
-loadAll();
+if (sessionStorage.getItem('dn_auth') === '1') loadAll();
 </script>
 </body>
 </html>
