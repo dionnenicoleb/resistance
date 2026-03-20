@@ -157,8 +157,12 @@ function setStatus(msg, isError) {
 }
 
 function daysSince(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / 86400000);
+  if (!dateStr) return '';
+  const added = new Date(dateStr);
+  const addedMidnight = new Date(added.getFullYear(), added.getMonth(), added.getDate());
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+  const days = Math.round((todayMidnight - addedMidnight) / 86400000);
   if (days === 0) return 'added today';
   if (days === 1) return '1 day sitting';
   return days + ' days sitting';
@@ -177,10 +181,9 @@ async function loadAll() {
 async function exportCSV() {
   const { data, error } = await db.from('tasks').select('*').order('added', { ascending: true });
   if (error) { setStatus('Export failed', true); return; }
-
   const rows = [['type', 'name', 'goal', 'count', 'added', 'completed', 'days_sitting']];
   data.forEach(r => {
-    const days = r.added ? Math.floor((Date.now() - new Date(r.added).getTime()) / 86400000) : '';
+    const days = r.added ? Math.round((new Date().setHours(0,0,0,0) - new Date(new Date(r.added).toDateString()).getTime()) / 86400000) : '';
     rows.push([
       r.type || '',
       '"' + (r.name || '').replace(/"/g, '""') + '"',
@@ -191,7 +194,6 @@ async function exportCSV() {
       days
     ]);
   });
-
   const csv = rows.map(r => r.join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
